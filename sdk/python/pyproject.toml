@@ -17,8 +17,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://cassette.dev"
-Source = "https://github.com/cassette-dev/cassette"
+Homepage = "https://github.com/NOVUS-STUDIOS-DEV/cassette"
+Source = "https://github.com/NOVUS-STUDIOS-DEV/cassette"
 
 [build-system]
 requires = ["hatchling"]

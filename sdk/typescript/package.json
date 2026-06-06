@@ -16,8 +16,8 @@
   },
   "keywords": ["llm", "agent", "testing", "record", "replay", "vcr", "openai", "anthropic", "ci", "vitest", "jest"],
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/cassette-dev/cassette" },
-  "homepage": "https://cassette.dev",
+  "repository": { "type": "git", "url": "https://github.com/NOVUS-STUDIOS-DEV/cassette" },
+  "homepage": "https://github.com/NOVUS-STUDIOS-DEV/cassette",
   "engines": { "node": ">=18" },
   "devDependencies": {
     "@types/node": "^20.0.0",
