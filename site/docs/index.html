@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cassette Docs</title>
+<style>
+  *{box-sizing:border-box} body{margin:0;font:16px/1.65 -apple-system,Segoe UI,Roboto,sans-serif;color:#0b0b0f}
+  .layout{display:grid;grid-template-columns:220px 1fr;max-width:1040px;margin:0 auto;gap:32px;padding:0 22px}
+  aside{position:sticky;top:0;height:100vh;padding:28px 0;border-right:1px solid #e4e4e7;overflow:auto}
+  aside a{display:block;color:#52525b;text-decoration:none;padding:5px 0;font-size:14px}
+  aside a:hover{color:#0b0b0f} aside .grp{font-weight:700;margin-top:16px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#0b0b0f}
+  main{padding:36px 0;max-width:680px} h1{font-size:34px} h2{font-size:24px;margin-top:40px;padding-top:8px;border-top:1px solid #f0f0f1}
+  h3{font-size:18px;margin-top:24px}
+  pre{background:#0b0b0f;color:#e8e8ea;padding:14px 16px;border-radius:10px;overflow:auto;font-size:13.5px}
+  code{font-family:ui-monospace,Menlo,monospace} p code,li code{background:#f4f4f5;padding:2px 6px;border-radius:5px}
+  table{border-collapse:collapse;width:100%} th,td{border:1px solid #e4e4e7;padding:8px 10px;text-align:left;font-size:14px}
+  .note{background:#f0f9ff;border:1px solid #bae6fd;padding:12px 14px;border-radius:8px}
+  @media(max-width:760px){.layout{grid-template-columns:1fr}aside{position:static;height:auto;border:0;border-bottom:1px solid #e4e4e7}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="grp">Cassette</div>
+  <a href="/">← Home</a>
+  <div class="grp">Start</div>
+  <a href="#what">What it is</a>
+  <a href="#install">Install</a>
+  <a href="#modes">Record / replay / auto</a>
+  <div class="grp">Concepts</div>
+  <a href="#drift">Behaviour drift</a>
+  <a href="#format">Cassette format</a>
+  <div class="grp">Team</div>
+  <a href="#team">Set up the gate</a>
+  <a href="#ci">CI workflow</a>
+  <a href="#cli">CLI reference</a>
+  <div class="grp">More</div>
+  <a href="#faq">FAQ</a>
+  <a href="https://github.com/NOVUS-STUDIOS-DEV/cassette">GitHub</a>
+</aside>
+
+<main>
+<h1>Cassette docs</h1>
+<p>Record your LLM/agent API calls once, replay them in tests — fast, free, deterministic. The Team
+tier adds a shared registry and a GitHub PR gate that flags real behaviour regressions.</p>
+
+<h2 id="what">What it is</h2>
+<p>Tests that call real models are slow, cost tokens on every run, and flake because output varies.
+Cassette records each response to a local file on the first run, then replays it on every run after —
+no network, no API key, no flakiness. The recorder is free and open source (MIT).</p>
+
+<h2 id="install">Install</h2>
+<pre><code>pip install cassette-sdk      # Python
+npm install cassette-sdk      # Node / TypeScript</code></pre>
+<h3>Python</h3>
+<pre><code>from cassette.recorder import http_client
+from openai import OpenAI
+
+client = OpenAI(http_client=http_client(project="demo"))  # records → replays locally</code></pre>
+<h3>TypeScript (vitest/jest)</h3>
+<pre><code>import OpenAI from "openai";
+import { recordingFetch } from "cassette-sdk/recorder";
+
+const client = new OpenAI({ fetch: recordingFetch({ project: "demo" }) });</code></pre>
+
+<h2 id="modes">Record / replay / auto</h2>
+<p>Set <code>CASSETTE_MODE</code>:</p>
+<table><tr><th>Mode</th><th>Behaviour</th></tr>
+<tr><td><code>record</code></td><td>always call the real API and save the response</td></tr>
+<tr><td><code>replay</code></td><td>only use saved cassettes; error on a miss</td></tr>
+<tr><td><code>auto</code> (default)</td><td>replay if a cassette exists, else record — <strong>fails safe</strong></td></tr></table>
+<p>Cassettes live in <code>./.cassettes</code> as plain JSON and diff cleanly in PRs.</p>
+
+<h2 id="drift">Behaviour drift</h2>
+<p>The gate doesn't byte-diff — it understands LLM output. Verdicts:</p>
+<table><tr><th>Verdict</th><th>Meaning</th></tr>
+<tr><td><code>identical</code></td><td>byte-for-byte same</td></tr>
+<tr><td><code>benign</code></td><td>only free-text wording changed (non-determinism) — fine</td></tr>
+<tr><td><code>regression</code></td><td>tool calls, structured-output shape, or stop reason changed — <strong>blocks merge</strong></td></tr></table>
+
+<h2 id="format">Cassette format</h2>
+<p>A portable JSON file per interaction (the ".har of agent test traffic"). See
+<a href="https://github.com/NOVUS-STUDIOS-DEV/cassette/blob/main/SPEC.md">SPEC.md</a>. Importers from
+<code>vcrpy</code> / <code>nock</code> are on the roadmap.</p>
+
+<h2 id="team">Set up the team gate</h2>
+<ol>
+<li><strong>Subscribe</strong> on the <a href="/#pricing">pricing page</a> → you'll land on a welcome
+page with your <code>CASSETTE_TOKEN</code>.</li>
+<li>Add <code>CASSETTE_TOKEN</code> as a repo secret (Settings → Secrets and variables → Actions).</li>
+<li>Install the GitHub App on your repo (link is on the welcome page).</li>
+<li>Add the CI workflow below.</li>
+</ol>
+<div class="note">The gate posts a ✓/✗ check on each PR. A human on your side approves or rejects every
+behaviour change — Cassette never merges for you.</div>
+
+<h2 id="ci">CI workflow</h2>
+<p>Copy <a href="https://github.com/NOVUS-STUDIOS-DEV/cassette/blob/main/examples/ci/cassette.yml">examples/ci/cassette.yml</a>
+to <code>.github/workflows/cassette.yml</code>:</p>
+<pre><code>name: cassette
+on: [pull_request]
+jobs:
+  agent-tests:
+    runs-on: ubuntu-latest
+    env:
+      CASSETTE_MODE: auto
+      CASSETTE_PROJECT: ${{ github.repository }}
+      CASSETTE_TOKEN: ${{ secrets.CASSETTE_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install cassette-sdk pytest
+      - run: pytest
+      - if: always()
+        run: cassette push --ref "pr-${{ github.event.number }}"</code></pre>
+
+<h2 id="cli">CLI reference</h2>
+<pre><code>cassette push --ref pr-42         # upload recorded cassettes for a PR
+cassette push --ref blessed       # promote to the baseline (run on main)</code></pre>
+<p>Reads <code>CASSETTE_PROJECT</code>, <code>CASSETTE_TOKEN</code>, <code>CASSETTE_DIR</code> from env.</p>
+
+<h2 id="faq">FAQ</h2>
+<h3>Does replay need an API key?</h3><p>No. Only recording new cassettes calls the real model.</p>
+<h3>What if the model reworded its answer?</h3><p>That's <code>benign</code> — the gate ignores wording and only blocks real behaviour changes.</p>
+<h3>Is my data used to train anything?</h3><p>No. Cassettes are never used for cross-customer training unless you explicitly opt in. See the <a href="https://github.com/NOVUS-STUDIOS-DEV/cassette/blob/main/legal/PRIVACY.md">privacy policy</a>.</p>
+<h3>Can I self-host?</h3><p>The recorder is fully offline OSS. The shared registry + gate are the hosted Team tier.</p>
+
+<p style="margin-top:40px;color:#52525b;font-size:14px">
+<a href="https://github.com/NOVUS-STUDIOS-DEV/cassette/blob/main/legal/TERMS.md">Terms</a> ·
+<a href="https://github.com/NOVUS-STUDIOS-DEV/cassette/blob/main/legal/PRIVACY.md">Privacy</a> ·
+<a href="https://github.com/NOVUS-STUDIOS-DEV/cassette/blob/main/legal/DPA.md">DPA</a></p>
+</main>
+</div>
+</body>
+</html>
