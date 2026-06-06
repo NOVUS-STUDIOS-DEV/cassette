@@ -1,0 +1,20 @@
+name = "cassette-backend"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Shared cassette registry (the paid team layer).
+[[r2_buckets]]
+binding = "REGISTRY"
+bucket_name = "cassette-registry"
+
+# Audit log + seats. Create: npx wrangler d1 create cassette-db, then apply schema.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "cassette-db"
+database_id = "REPLACE_WITH_D1_ID"
+
+# Secrets (set with `wrangler secret put <NAME>`): GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY,
+# GITHUB_WEBHOOK_SECRET, STRIPE_WEBHOOK_SECRET
+
+[observability]
+enabled = true

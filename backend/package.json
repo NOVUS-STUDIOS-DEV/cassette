@@ -1,0 +1,17 @@
+{
+  "name": "cassette-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cassette hosted backend — shared registry + GitHub merge-gate (the paid team layer)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "db:init": "wrangler d1 execute cassette-db --file=schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^3.80.0"
+  }
+}
