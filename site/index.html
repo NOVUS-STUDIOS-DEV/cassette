@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cassette — record/replay for LLM &amp; agent tests</title>
+<meta name="description" content="Make your flaky, expensive LLM tests fast, free, and deterministic — and catch agent behavior regressions on every PR." />
+<style>
+  :root{--ink:#0b0b0f;--muted:#52525b;--line:#e4e4e7;--accent:#111}
+  *{box-sizing:border-box} body{margin:0;font:16px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,sans-serif;color:var(--ink)}
+  .wrap{max-width:860px;margin:0 auto;padding:0 22px}
+  header{padding:18px 0;display:flex;justify-content:space-between;align-items:center}
+  .logo{font-weight:700;font-size:20px} nav a{color:var(--muted);text-decoration:none;margin-left:18px}
+  .hero{padding:64px 0 40px} h1{font-size:42px;line-height:1.1;margin:0 0 16px}
+  .sub{font-size:20px;color:var(--muted);max-width:620px}
+  pre{background:#0b0b0f;color:#e8e8ea;padding:16px 18px;border-radius:10px;overflow:auto;font-size:14px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .btn{display:inline-block;background:var(--accent);color:#fff;padding:12px 18px;border-radius:9px;text-decoration:none;font-weight:600;border:0;cursor:pointer;font-size:16px}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  section{padding:40px 0;border-top:1px solid var(--line)}
+  h2{font-size:26px} .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+  .card{border:1px solid var(--line);border-radius:12px;padding:18px}
+  .price{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .tag{font-size:13px;color:var(--muted)} .big{font-size:34px;font-weight:700}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px}
+  footer{color:var(--muted);font-size:14px;padding:40px 0}
+  @media(max-width:640px){.grid,.price{grid-template-columns:1fr}h1{font-size:32px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🎞️ Cassette</div>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/NOVUS-STUDIOS-DEV/cassette">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>Your LLM tests, fast, free, and deterministic.</h1>
+    <p class="sub">Cassette records your app's LLM &amp; agent API calls, then replays them in CI — so tests
+      stop being slow, expensive, and flaky. The team tier catches agent <em>behavior</em> regressions on every PR.</p>
+    <p style="margin-top:24px">
+      <a class="btn" href="#start">Start free</a>
+      <a class="btn ghost" href="#pricing">Get Team</a>
+    </p>
+  </div>
+
+  <section id="start">
+    <h2>Start in one line</h2>
+    <p>Free &amp; open source. Records to local files; no gateway, no infra.</p>
+    <pre><code>pip install cassette-sdk        # Python
+npm install cassette-sdk        # Node / TypeScript</code></pre>
+    <pre><code>from cassette.recorder import http_client
+from openai import OpenAI
+client = OpenAI(http_client=http_client(project="demo"))  # records → replays</code></pre>
+  </section>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <div class="grid">
+      <div class="card"><strong>1. Record</strong><p>First test run saves each LLM response to a portable cassette file.</p></div>
+      <div class="card"><strong>2. Replay</strong><p>Every run after replays it — instant, $0 tokens, no flakiness.</p></div>
+      <div class="card"><strong>3. Gate</strong><p>On each PR, the Team gate flags when your agent's behavior actually changed.</p></div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <h2>Pricing</h2>
+    <div class="price">
+      <div class="card">
+        <div class="tag">Free / OSS</div><div class="big">£0</div>
+        <p>The recorder + replay, local cassettes, unlimited. For individuals &amp; open source.</p>
+        <a class="btn ghost" href="#start">Install</a>
+      </div>
+      <div class="card">
+        <div class="tag">Team</div><div class="big">£18<span style="font-size:15px;font-weight:400">/dev/mo</span></div>
+        <p>Shared registry + the GitHub PR behavior-gate on semantic drift. Storage included.</p>
+        <form id="buy" onsubmit="return startCheckout(event)">
+          <label>Your repo (owner/name)</label>
+          <input id="repo" placeholder="acme/my-agent" required />
+          <label>Seats</label>
+          <input id="seats" type="number" min="1" value="3" required />
+          <p style="margin-top:12px"><button class="btn" type="submit">Buy Team seats →</button></p>
+          <p id="err" style="color:#b91c1c;font-size:14px"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Cassette · MIT-licensed recorder · <a href="https://github.com/NOVUS-STUDIOS-DEV/cassette">source</a></p>
+  </footer>
+</div>
+
+<script>
+  const BACKEND = "https://cassette-backend.black-tooth-7c1e.workers.dev";
+  async function startCheckout(e){
+    e.preventDefault();
+    const repo = document.getElementById("repo").value.trim();
+    const seats = parseInt(document.getElementById("seats").value, 10) || 1;
+    const err = document.getElementById("err"); err.textContent = "";
+    if(!/^[^/]+\/[^/]+$/.test(repo)){ err.textContent = "Use the form owner/name, e.g. acme/my-agent"; return false; }
+    try{
+      const r = await fetch(`${BACKEND}/v1/${repo}/checkout?seats=${seats}`, {method:"POST"});
+      const d = await r.json();
+      if(d.url){ window.location = d.url; } else { err.textContent = d.error || "Could not start checkout"; }
+    }catch(_){ err.textContent = "Network error — try again"; }
+    return false;
+  }
+</script>
+</body>
+</html>

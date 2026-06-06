@@ -8,6 +8,7 @@ export async function createCheckoutSession(
   env: Env,
   project: string,
   seats: number,
+  baseUrl: string,
 ): Promise<string> {
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_ID) {
     throw new Error("Stripe not configured (missing STRIPE_SECRET_KEY / STRIPE_PRICE_ID)");
@@ -18,8 +19,14 @@ export async function createCheckoutSession(
   form.set("line_items[0][quantity]", String(seats));
   form.set("metadata[project]", project);
   form.set("subscription_data[metadata][project]", project);
-  form.set("success_url", `https://github.com/${project}?cassette=welcome`);
-  form.set("cancel_url", `https://github.com/${project}?cassette=cancelled`);
+  form.set("cancel_url", `${baseUrl}/?checkout=cancelled`);
+
+  // success_url must keep Stripe's {CHECKOUT_SESSION_ID} placeholder UN-encoded, so append it raw.
+  const success = `${baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`;
+  const body =
+    form.toString() +
+    "&success_url=" +
+    encodeURIComponent(success).replace("%7BCHECKOUT_SESSION_ID%7D", "{CHECKOUT_SESSION_ID}");
 
   const resp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
@@ -27,7 +34,7 @@ export async function createCheckoutSession(
       authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
       "content-type": "application/x-www-form-urlencoded",
     },
-    body: form,
+    body,
   });
   const data = (await resp.json()) as { url?: string; error?: { message?: string } };
   if (!resp.ok || !data.url) throw new Error(data.error?.message || "stripe checkout failed");

@@ -31,7 +31,7 @@ def push_dir(cassette_dir: str, *, project: str, ref: str, token: Optional[str] 
     if not token:
         raise RuntimeError("no seat token (set CASSETTE_TOKEN)")
     items = []
-    for f in Path(cassette_dir).glob("*.json"):
+    for f in Path(cassette_dir).rglob("*.json"):
         rec = json.loads(f.read_text())
         items.append({"fingerprint": rec.get("fingerprint", f.stem), "body": json.dumps(rec)})
     if not items:

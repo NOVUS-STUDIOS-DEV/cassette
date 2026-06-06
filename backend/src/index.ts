@@ -11,6 +11,7 @@
 import { ensureSeat, handleStripeEvent } from "./billing";
 import { createCheckoutSession } from "./checkout";
 import { evaluatePr, postCheckRun, summarize } from "./github";
+import { handleWelcome } from "./welcome";
 import { blessRef, getCassette, listFingerprints, putCassette } from "./registry";
 import type { Env } from "./types";
 import { verifyGithub, verifyStripe } from "./verify";
@@ -38,6 +39,13 @@ export default {
     const parts = url.pathname.split("/").filter(Boolean);
 
     if (parts[0] === "_health") return json({ ok: true });
+
+    // --- post-checkout onboarding page (mints CI token from a paid Stripe session) ---
+    if (req.method === "GET" && parts[0] === "welcome") {
+      const sid = url.searchParams.get("session_id");
+      if (!sid) return json({ error: "missing session_id" }, 400);
+      return handleWelcome(env, sid);
+    }
 
     // --- GitHub merge-gate webhook (signature-verified) ---
     if (req.method === "POST" && parts[0] === "webhooks" && parts[1] === "github") {
@@ -84,7 +92,7 @@ export default {
       const project = `${parts[1]}/${parts[2]}`;
       const seats = Math.max(1, parseInt(url.searchParams.get("seats") || "1", 10));
       try {
-        const checkoutUrl = await createCheckoutSession(env, project, seats);
+        const checkoutUrl = await createCheckoutSession(env, project, seats, url.origin);
         return json({ url: checkoutUrl, project, seats });
       } catch (e) {
         return json({ error: String(e) }, 500);

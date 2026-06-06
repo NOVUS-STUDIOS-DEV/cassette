@@ -1,0 +1,40 @@
+# Copy this to .github/workflows/cassette.yml in your repo.
+# It runs your agent tests (replaying recorded LLM calls = fast/free/deterministic), then pushes the
+# cassettes to your Cassette team registry so the behavior-gate can compare this PR to the baseline.
+#
+# Repo secrets needed (Settings → Secrets and variables → Actions):
+#   CASSETTE_TOKEN   – from your Cassette welcome page (after subscribing)
+#   OPENAI_API_KEY   – only used to RECORD new cassettes; replays need no key
+name: cassette
+on: [pull_request]
+
+jobs:
+  agent-tests:
+    runs-on: ubuntu-latest
+    env:
+      CASSETTE_MODE: auto                       # replay if recorded, else record
+      CASSETTE_PROJECT: ${{ github.repository }} # owner/repo = your registry project
+      CASSETTE_TOKEN: ${{ secrets.CASSETTE_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install cassette-sdk pytest        # plus your own deps / -e .
+      - name: Run agent tests (cassette-backed)
+        run: pytest
+      - name: Push cassettes to the registry
+        if: always()
+        run: cassette push --ref "pr-${{ github.event.number }}"
+
+  # On merge to main, promote the PR's recordings to the blessed baseline:
+  bless-main:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      CASSETTE_PROJECT: ${{ github.repository }}
+      CASSETTE_TOKEN: ${{ secrets.CASSETTE_TOKEN }}
+    steps:
+      - run: pip install cassette-sdk
+      - run: cassette push --ref blessed
