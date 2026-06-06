@@ -11,10 +11,14 @@ bucket_name = "cassette-registry"
 [[d1_databases]]
 binding = "DB"
 database_name = "cassette-db"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "f2d57c3d-2df4-4382-87e2-484d9d0c6829"
 
 # Secrets (set with `wrangler secret put <NAME>`): GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY,
 # GITHUB_WEBHOOK_SECRET, STRIPE_WEBHOOK_SECRET
+
+[vars]
+# Stripe per-seat price (test mode). Not secret. Swap for the live price id when going live.
+STRIPE_PRICE_ID = "price_1TfPl1GmxSK6mqaMJrTzXUjH"
 
 [observability]
 enabled = true

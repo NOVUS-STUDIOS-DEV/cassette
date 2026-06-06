@@ -9,6 +9,10 @@ export interface Env {
   GITHUB_WEBHOOK_SECRET?: string;
   /** Stripe webhook signing secret (set via `wrangler secret put`). */
   STRIPE_WEBHOOK_SECRET?: string;
+  /** Stripe secret key (set via `wrangler secret put`) — used to create Checkout sessions. */
+  STRIPE_SECRET_KEY?: string;
+  /** Stripe per-seat price id (plain var in wrangler.toml). */
+  STRIPE_PRICE_ID?: string;
 }
 
 /** A drift finding attached to a PR check. */

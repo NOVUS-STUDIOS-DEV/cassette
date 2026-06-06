@@ -9,6 +9,7 @@
 //   POST /webhooks/stripe                        Stripe: sync subscription → seat allowance (verified)
 
 import { ensureSeat, handleStripeEvent } from "./billing";
+import { createCheckoutSession } from "./checkout";
 import { evaluatePr, postCheckRun, summarize } from "./github";
 import { blessRef, getCassette, listFingerprints, putCassette } from "./registry";
 import type { Env } from "./types";
@@ -78,9 +79,22 @@ export default {
       return json(result);
     }
 
-    // --- registry API: /v1/:project/... ---
-    if (parts[0] === "v1") {
-      const project = parts[1];
+    // --- self-serve checkout: POST /v1/:owner/:repo/checkout?seats=N (no token — this is how you buy) ---
+    if (req.method === "POST" && parts[0] === "v1" && parts[3] === "checkout" && parts.length === 4) {
+      const project = `${parts[1]}/${parts[2]}`;
+      const seats = Math.max(1, parseInt(url.searchParams.get("seats") || "1", 10));
+      try {
+        const checkoutUrl = await createCheckoutSession(env, project, seats);
+        return json({ url: checkoutUrl, project, seats });
+      } catch (e) {
+        return json({ error: String(e) }, 500);
+      }
+    }
+
+    // --- registry API: /v1/:owner/:repo/... (project = "owner/repo", matches repo full_name) ---
+    if (parts[0] === "v1" && parts.length >= 4) {
+      const project = `${parts[1]}/${parts[2]}`;
+      const sub = parts[3]; // "cassettes" | "bless"
       const ref = url.searchParams.get("ref") || "blessed";
       const actor = req.headers.get("x-cassette-actor") || "ci";
 
@@ -89,22 +103,22 @@ export default {
       }
       const seated = await ensureSeat(env, project, actor); // provision/track up to allowance
 
-      // POST /v1/:project/cassettes
-      if (req.method === "POST" && parts[2] === "cassettes" && parts.length === 3) {
+      // POST /v1/:owner/:repo/cassettes
+      if (req.method === "POST" && sub === "cassettes" && parts.length === 4) {
         const items = (await req.json()) as Array<{ fingerprint: string; body: string }>;
         for (const it of items) await putCassette(env, project, ref, it.fingerprint, it.body, actor);
         return json({ pushed: items.length, ref, actor, seated, ...(seated ? {} : { warning: "no seat available for this committer — gating limited until a seat is added" }) });
       }
-      if (req.method === "GET" && parts[2] === "cassettes" && parts.length === 3) {
+      if (req.method === "GET" && sub === "cassettes" && parts.length === 4) {
         return json({ ref, fingerprints: await listFingerprints(env, project, ref) });
       }
-      if (req.method === "GET" && parts[2] === "cassettes" && parts[3]) {
-        const body = await getCassette(env, project, ref, parts[3]);
+      if (req.method === "GET" && sub === "cassettes" && parts[4]) {
+        const body = await getCassette(env, project, ref, parts[4]);
         return body
           ? new Response(body, { headers: { "content-type": "application/json" } })
           : json({ error: "not found" }, 404);
       }
-      if (req.method === "POST" && parts[2] === "bless") {
+      if (req.method === "POST" && sub === "bless") {
         const from = url.searchParams.get("from");
         if (!from) return json({ error: "missing ?from=<branch>" }, 400);
         const n = await blessRef(env, project, from, actor);
